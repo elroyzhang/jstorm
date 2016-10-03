@@ -1,0 +1,115 @@
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<script id="supervisor-summary-template" type="text/html">
+<table class="zebra-striped" id="supervisor-summary-table">
+  <thead>
+    <tr>
+      <th>
+        <span class="tip right" title="A unique identifier given to a Supervisor when it joins the cluster.">
+          Id
+        </span>
+      </th>
+      <th>
+        <span class="tip above" title="The hostname reported by the remote host. (Note that this hostname is not the result of a reverse lookup at the Nimbus node.)">
+          Host
+        </span>
+      </th>
+      <th>
+        <span class="tip above" title="The length of time a Supervisor has been registered to the cluster.">
+          Uptime
+        </span>
+      </th>
+      <th>
+        <span class="tip above" title="The time when Supervisor Launch.">
+          Launch Time
+        </span>
+      </th>
+      <th>
+        <span class="tip above" title="Slots are Workers (processes).">
+          Slots
+        </span>
+      </th>
+      <th>
+        <span class="tip left" title="Slots are Workers (processes).">
+          Used slots
+        </span>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{supervisorId}}</td>
+      <td>{{host}}</td>
+      <td>{{uptime}}</td>
+      <td id="submitTime">{{submitTime}}</td>
+      <td>{{slotsTotal}}</td>
+      <td>{{slotsUsed}}</td>
+    </tr>
+  </tbody>
+</table>
+</script>
+<script id="supervisor-topology-detail-template" type="text/html">
+  <h2>Topology Detail</h2>
+  <table id="topology-detail-table">
+    <thead>
+      <tr>
+        <th>
+          <span class="tip above" title="The name given to the topology by when it was submitted. Click the name to view the Topology's information.">
+            TopologyName
+          </span>
+        </th>
+        <th>
+          <span class="tip right" title="The ID assigned to a the Component by the Topology.">
+            TopologyId
+          </span>
+        </th>
+        <th>
+          <span class="tip right" title="The ID assigned to a the Component by the Topology.">
+            ComponentId
+          </span>
+        </th>
+        <th class="header">
+          <span data-original-title="The port number used by the Worker to which an Executor is assigned. Click on the port number to open the logviewer page for this Worker." class="tip above">
+            Port
+          </span>
+        </th>
+        <th>
+          <span class="tip above" title="Executors are threads in a Worker process.">
+            Executor[task_start - task_end]
+          </span>
+        </th>
+        <th>
+          <span class="tip above" title="The length of time a Supervisor has been registered to the cluster.">
+            Uptime
+          </span>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#topologies}}
+      <tr>
+        <td><a href="javascript:void(0)" onClick="javascript:window.open('topology.html?id={{topologyId}}', '_blank')">{{topologyName}}</a></td>
+        <td>{{topologyId}}</td>
+        <td>{{componentId}}</td>
+        <td>{{port}}</td>
+        <td>{{executor}}</td>
+        <td>{{uptime}}</td>
+      </tr>
+      {{/topologies}}
+    </tbody>
+  </table>
+</script>

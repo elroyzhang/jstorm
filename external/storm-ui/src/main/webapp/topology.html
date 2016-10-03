@@ -1,0 +1,360 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Storm UI</title>
+<base href="" />
+<base target="_self" />
+<script type="text/javascript">
+  var new_path = location.pathname;
+  var baseUrl = 'http://' + location.host;
+  if (null != new_path) {
+    var reg = /(\/proxy\/application_[0-9]_[0-9]\/)|(\/port_[0-9]*\/)/;
+    var regRet = reg.exec(new_path);
+    if (null != regRet) {
+      baseUrl = baseUrl + regRet[0];
+    } else {
+      baseUrl = baseUrl + "/";
+    }
+  }
+  document.getElementsByTagName("base")[0].href = baseUrl;
+</script>
+<link href="css/bootstrap-3.3.1.min.css" rel="stylesheet"
+ type="text/css">
+<link href="css/jquery.dataTables.1.10.4.min.css" rel="stylesheet"
+ type="text/css">
+<link href="css/dataTables.bootstrap.css" rel="stylesheet"
+ type="text/css">
+<link href="css/jsonFormatter.min.css" rel="stylesheet" type="text/css">
+<link href="css/style.css" rel="stylesheet" type="text/css">
+<script src="js/jquery-1.11.1.min.js" type="text/javascript"></script>
+<script src="js/jquery.dataTables.1.10.4.min.js" type="text/javascript"></script>
+<script src="js/jquery.cookies.2.2.0.min.js" type="text/javascript"></script>
+<script src="js/jquery.mustache.js" type="text/javascript"></script>
+<script src="js/url.min.js" type="text/javascript"></script>
+<script src="js/bootstrap-3.3.1.min.js" type="text/javascript"></script>
+<script src="js/jquery.blockUI.min.js" type="text/javascript"></script>
+<script src="js/jsonFormatter.min.js" type="text/javascript"></script>
+<script src="js/script.js" type="text/javascript"></script>
+<script src="js/visualization.js" type="text/javascript"></script>
+<script src="js/arbor.js" type="text/javascript"></script>
+<script src="js/arbor-graphics.js" type="text/javascript"></script>
+<script src="js/dataTables.bootstrap.min.js" type="text/javascript"></script>
+</head>
+<body>
+ <script type="text/javascript">
+    
+  </script>
+ <h1>
+  <a href="javascript:go('')">Storm UI</a>
+ </h1>
+ <h2 style="display: none;">Topology DAG</h2>
+ <div id="topology-dag" style="display: none;"></div>
+ <h2>Topology Summary</h2>
+ <div id="topology-summary"></div>
+ <div id="topology-actions" style="">
+  <h2 class="js-only">Topology actions</h2>
+  <p id="topology-actions" class="js-only"></p>
+ </div>
+ <div id="topology-stats"></div>
+ <div id="spout-stats"></div>
+ <div id="bolt-stats"></div>
+ <div id="topology-visualization" style=""></div>
+ <div id="topology-configuration"></div>
+ <p id="toggle-switch" style="display: block;" class="js-only"></p>
+ <div id="json-response-error"></div>
+ <div id="response-internal-server-error"></div>
+</body>
+<script>
+  var toggleChangeLogLevel;
+
+  function closeChangeLogLevel() {
+    var container = $("#change-log-level");
+    container.hide();
+  }
+
+  function clearLoggerLevel(id) {
+    $("#loggerRemove-" + id).val("true");
+    sendLoggerLevel(id);
+    $("#logger-" + id).remove();
+  }
+
+  function sendLoggerLevel(id) {
+    var topologyId = $.url("?id");
+    var shouldRemove = $("#loggerRemove-" + id).val() === "true";
+    var level = $("#loggerLevel-" + id).val();
+    var timeout = parseInt($("#loggerTimeout-" + id).val());
+    timeout = isNaN(timeout) ? 0 : timeout;
+    var loggerName = $("#loggerName-" + id).val();
+    if (level === 'Pick Level') {
+      alert('Please pick a valid log level');
+      return;
+    }
+    var levelBelowInfo = level === 'DEBUG';
+
+    if (!shouldRemove && levelBelowInfo && timeout <= 0) {
+      timeout = parseInt(prompt(
+          "You must provide a timeout > 0 for DEBUG log level. What timeout would you like (secs)?", 30));
+      if (!timeout) {
+        return;
+      }
+    }
+    var data = {};
+    var loggerSetting;
+
+    if (id === 0) {
+      data["namedLoggerLevels"] = {};
+      data["namedLoggerLevels"]["ROOT"] = {};
+      loggerSetting = data["namedLoggerLevels"]["ROOT"];
+    } else {
+      data["namedLoggerLevels"] = {};
+      data["namedLoggerLevels"][loggerName] = {};
+      loggerSetting = data["namedLoggerLevels"][loggerName];
+    }
+
+    loggerSetting.target_level = shouldRemove ? "" : level;
+    loggerSetting.reset_level = "INFO";
+    loggerSetting.timeout = timeout;
+
+    sendRequest(topologyId, "logconfig", null, data, toggleChangeLogLevel);
+  };
+
+  function renderLogLevelForm(template, responseData) {
+    var topologyId = $.url("?id");
+    var container = $("#change-log-level");
+
+    var levels = [ {
+      name : "Pick Level"
+    }, {
+      name : "ALL"
+    }, {
+      name : "TRACE"
+    }, {
+      name : "DEBUG"
+    }, {
+      name : "INFO"
+    }, {
+      name : "WARN"
+    }, {
+      name : "ERROR"
+    }, {
+      name : "FATAL"
+    }, {
+      name : "OFF"
+    } ];
+    var partialTemplates = $(template).filter('.partials');
+    var partials = {};
+
+    $.each(partialTemplates, function(ix, partial) {
+      var obj = $(partial);
+      partials[obj.attr('id')] = obj.html();
+    });
+
+    var logLevelTemplate = $(template).filter("#topology-change-log-level-template").html();
+
+    var calcAbsoluteTimeout = function(timeout_epoch) {
+      var absoluteTimeout = "";
+      if (timeout_epoch) {
+        var d = new Date(0);
+        d.setUTCSeconds(timeout_epoch);
+        absoluteTimeout = d.toLocaleDateString() + " " + d.toLocaleTimeString();
+      }
+      return absoluteTimeout;
+    };
+    var renderImpl = function(data) {
+      var loggers = [];
+      var loggerCount = 1;
+      var obj = data.namedLoggerLevels;
+      if (!obj) {
+        obj = {};
+        data.namedLoggerLevels = obj;
+      }
+
+      var sortedLoggers = Object.keys(obj).sort(function(l1, l2) {
+        if (l1 === "ROOT")
+          return -1;
+        if (l2 === "ROOT")
+          return 1;
+        return l1 > l2;
+      });
+
+      sortedLoggers.forEach(function(l) {
+        var obj = data.namedLoggerLevels[l];
+        obj.loggerId = loggerCount++;
+        obj.loggerName = l;
+        obj.named = l != "ROOT";
+        obj.cls = "namedLoggers";
+        obj.levelSelected = function(obj) {
+          return function() {
+            return this.name === obj.target_level ? "selected" : "";
+          }
+        }(obj);
+        obj.absoluteTimeout = calcAbsoluteTimeout(obj.timeout_epoch);
+        obj.canClear = true;
+        loggers.push(obj);
+      });
+
+      loggers.push({
+        loggerId : loggerCount,
+        isNew : true,
+        cls : 'newLogger'
+      });
+
+      var tmplData = {
+        loggers : loggers,
+        levels : levels
+      };
+
+      container.html(Mustache.render(logLevelTemplate, tmplData, partials));
+      container.show('fast');
+    };
+    if (!responseData) {
+      var topologyId = $.url("?id");
+      $.get(proxyPath() + 'api/v1/topology/logconfig?tid=' + topologyId, renderImpl, "json");
+    } else {
+      renderImpl(responseData);
+    }
+  }
+
+  $(document).ajaxStop($.unblockUI);
+  $(document).ajaxStart(function() {
+    if ($("#topology-visualization").children().size() == 0) {
+      $.blockUI({
+        message : '<img src="images/spinner.gif" /> <h3>Loading topology summary...</h3>'
+      });
+    }
+  });
+  $(document).ready(
+      function() {
+        var proxy_path = proxyPath();
+        var topologyId = $.url("?id");
+        var window = $.url("?window");
+        var sys = $.cookies.get("sys") || "false";
+        var url = proxy_path + "api/v1/topology/detail?tid=" + topologyId + "&sys=" + sys;
+        if (window)
+          url += "&window=" + window;
+        renderToggleSys($("#toggle-switch"));
+        $.ajaxSetup({
+          "error" : function(jqXHR, textStatus, response) {
+            var errorJson = jQuery.parseJSON(jqXHR.responseText);
+            $.get(proxy_path + "templates/json-error-template.html", function(template) {
+              $("#json-response-error").append(
+                  Mustache.render($(template).filter("#json-error-template").html(), errorJson));
+            });
+          }
+        });
+        /*
+        $.getJSON(proxy_path + "api/v1/topology/dag?tid="+topologyId,function(response,status,jqXHR) {
+        	if (response["result_code"] == 500) {//exception
+            	$.get(proxy_path + "templates/response-error-template.html", function(template) {
+                    $("#response-internal-server-error").append(Mustache.render($(template).filter("#response-error-template").html(),response));
+            	});
+            } else {
+                var topologyDag = $("#topology-dag");
+                $.get(proxy_path + "templates/topology-page-template.html", function(template) {
+                  topologyDag.append(Mustache.render($(template).filter("#topology-dag-template").html(),response));
+                });
+            }
+        });
+         */
+
+        $.getJSON(url, function(response, status, jqXHR) {
+          var topologySummary = $("#topology-summary");
+          var topologyStats = $("#topology-stats");
+          var spoutStats = $("#spout-stats");
+          var boltStats = $("#bolt-stats");
+          var config = $("#topology-configuration");
+          var topologyActions = $("#topology-actions");
+          var topologyVisualization = $("#topology-visualization")
+          var formattedConfig = formatConfigData(response["configuration"]);
+          var buttonJsonData = topologyActionJson(response["id"], response["encodedId"], response["name"],
+              response["status"], response["msgTimeout"], response["debug"], response["samplingPct"]);
+          if (response["result_code"] == 500) {//exception
+            $.get(proxy_path + "templates/response-error-template.html", function(template) {
+              $("#response-internal-server-error").append(
+                  Mustache.render($(template).filter("#response-error-template").html(), response));
+            });
+          } else {
+            $.get(proxy_path + "templates/topology-page-template.html", function(template) {
+              toggleChangeLogLevel = function(data) {
+                renderLogLevelForm(template, data);
+              }
+              topologySummary
+                  .append(Mustache.render($(template).filter("#topology-summary-template").html(), response));
+              $("#topology-summary-table").DataTable({
+                paging : false,
+                info : false,
+                searching : false
+              });
+              topologyActions.append(Mustache.render($(template).filter("#topology-actions-template").html(),
+                  buttonJsonData));
+              topologyStats.append(Mustache.render($(template).filter("#topology-stats-template").html(), response));
+              $("#topology-stats-table").DataTable({
+                paging : false,
+                info : false,
+                searching : false,
+                columnDefs : [ {
+                  type : "num",
+                  targets : [ 1, 2, 3, 4, 5 ]
+                }, {
+                  type : "time-str",
+                  targets : [ 0 ]
+                } ]
+              });
+              spoutStats.append(Mustache.render($(template).filter("#spout-stats-template").html(), response));
+              dtAutoPage("#spout-stats-table", {
+                columnDefs : [ {
+                  type : "num",
+                  targets : [ 1, 2, 3, 4, 5, 6, 7 ]
+                } ]
+              });
+              boltStats.append(Mustache.render($(template).filter("#bolt-stats-template").html(), response));
+              dtAutoPage("#bolt-stats-table", {
+                columnDefs : [ {
+                  type : "num",
+                  targets : [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+                } ]
+              });
+              //TODO 
+              topologyVisualization.append(Mustache.render($(template).filter("#topology-visualization-template")
+                  .html(), response));
+              $("#show-hide-visualization").click(function() {
+                show_visualization(null)
+              });
+
+              config.append(Mustache.render($(template).filter("#topology-configuration-template").html(),
+                  formattedConfig));
+              $('#topology-configuration td').jsonFormatter()
+              //key, value
+              dtAutoPage("#topology-configuration-table", {});
+
+              var errorCells = document.getElementsByClassName("errorSpan");
+              for (i = 0; i < errorCells.length; i++) {
+                var timeLapsedInSecs = errorCells[i].id;
+                if (parseInt(timeLapsedInSecs) < 1800) {
+                  errorCells[i].style.color = "#9d261d";
+                  errorCells[i].style.borderBottomColor = "#9d261d";
+                }
+              }
+            });
+          }
+        });
+      });
+</script>
+</html>

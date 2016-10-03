@@ -1,0 +1,311 @@
+
+<html>
+<head>
+<!--
+     Licensed to the Apache Software Foundation (ASF) under one or more
+     contributor license agreements.  See the NOTICE file distributed with
+     this work for additional information regarding copyright ownership.
+     The ASF licenses this file to You under the Apache License, Version 2.0
+     (the "License"); you may not use this file except in compliance with
+     the License.  You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+    -->
+<meta charset="UTF-8">
+<title>Storm UI</title>
+<base href="" />
+<base target="_self" />
+<script type="text/javascript">
+  var new_path = location.pathname;
+  var baseUrl = 'http://' + location.host;
+  if (null != new_path) {
+    var reg = /(\/proxy\/application_[0-9]_[0-9]\/)|(\/port_[0-9]*\/)/;
+    var regRet = reg.exec(new_path);
+    if (null != regRet) {
+      baseUrl = baseUrl + regRet[0];
+    } else {
+      baseUrl = baseUrl + "/";
+    }
+  }
+  document.getElementsByTagName("base")[0].href = baseUrl;
+</script>
+<link href="css/bootstrap-3.3.1.min.css" rel="stylesheet"
+ type="text/css">
+<link href="css/jquery.dataTables.1.10.4.min.css" rel="stylesheet"
+ type="text/css">
+<link href="css/dataTables.bootstrap.css" rel="stylesheet"
+ type="text/css">
+<link href="css/jsonFormatter.min.css" rel="stylesheet" type="text/css">
+<link href="css/style.css" rel="stylesheet" type="text/css">
+<script src="js/jquery-1.11.1.min.js" type="text/javascript"></script>
+<script src="js/jquery.dataTables.1.10.4.min.js" type="text/javascript"></script>
+<script src="js/jquery.cookies.2.2.0.min.js" type="text/javascript"></script>
+<script src="js/jquery.mustache.js" type="text/javascript"></script>
+<script src="js/bootstrap-3.3.1.min.js" type="text/javascript"></script>
+<script src="js/jquery.blockUI.min.js" type="text/javascript"></script>
+<script src="js/dataTables.bootstrap.min.js" type="text/javascript"></script>
+<script src="js/jsonFormatter.min.js" type="text/javascript"></script>
+<script src="js/script.js" type="text/javascript"></script>
+<style type="text/css">
+.active {
+	background-color: #A8A8A8;
+}
+
+#ulSummary li {
+	float: left; /* 往左浮动 */
+	border: 1px;
+}
+</style>
+</head>
+<body>
+ <script type="text/javascript">
+    function submitTopology() {
+      var ret = window.open("submit-topology.html");
+      /*, null,
+          "dialogWidth=700px;dialogHeight=500px;status:no;scroll:no;dialogLeft:500px;dialogTop:200px;");
+      if (ret == "true" || ret == true) {
+        window.location.reload();
+      }*/
+    }
+  </script>
+ <h1>
+  <a href="javascript:go('')">Storm UI</a>
+ </h1>
+ <div>
+  <table>
+   <tr style="align: center;">
+    <td><h2>Cluster Summary</h2></td>
+    <td style="padding-left: 20px;"><input id="submitBtn"
+     onclick="submitTopology()" type="button" value="submit topology"
+     class="btn btn-primary"></td>
+    <td width="60%"></td>
+    <td style="padding-right: 20px;"><a href="javascript:void(0)"
+     onclick="javascript:window.open('crawler/job-config.html', '_blank')">Crawler
+      Job Config</a></td>
+    <td><a href="javascript:void(0)"
+     onclick="javascript:window.open('crawler/crawler-query.html', '_blank')">Crawler
+      Content Query</a></td>
+    <td width="5%"></td>
+   </tr>
+  </table>
+ </div>
+ <div id="cluster-summary"></div>
+ <ul id="ulSummary" class="list-group">
+  <li class="list-group-item"><a href="javascript:void(0)" style="font-size: 20;">Topology
+    Summary</a></li>
+  <li class="list-group-item"><a href="javascript:void(0)" style="font-size: 20;">Nimbus
+    Summary</a></li>
+  <li class="list-group-item"><a href="javascript:void(0)" style="font-size: 20;">Supervisor
+    Summary</a></li>
+  <li class="list-group-item"><a href="javascript:void(0)" style="font-size: 20;">Nimbus
+    Configuration</a></li>
+ </ul>
+ <div id="container01">
+  <div class="summary" id="topology-summary"></div>
+  <div class="summary" id="nimbus-summary"></div>
+  <div class="summary" id="supervisor-summary"></div>
+  <div class="summary" id="nimbus-configuration"></div>
+ </div>
+ <p id="toggle-switch" style="display: block;" class="js-only"></p>
+ <div id="json-response-error"></div>
+ <div id="response-internal-server-error"></div>
+</body>
+<script>
+  $(document).ajaxStop($.unblockUI);
+  $(document).ajaxStart(function() {
+    $.blockUI({
+      message : '<img src="images/spinner.gif" /> <h3>Loading summary...</h3>'
+    });
+  });
+  $(document).ready(
+      function() {
+        renderToggleSys($("#toggle-switch"));
+        $.ajaxSetup({
+          "error" : function(jqXHR, textStatus, response) {
+            var errorJson = jQuery.parseJSON(jqXHR.responseText);
+            $.get("templates/json-error-template.html", function(template) {
+              $("#json-response-error").append(
+                  Mustache.render($(template).filter("#json-error-template").html(), errorJson));
+            });
+          }
+        });
+        var proxy_path = proxyPath();
+        var template = $.get(proxy_path + "templates/index-page-template.html");
+        var clusterSummary = $("#cluster-summary");
+        $.getJSON(proxy_path + "api/v1/cluster/summary", function(response, status, jqXHR) {
+          if (response["result_code"] == 500) {//exception
+            $.get(proxy_path + "templates/response-error-template.html", function(template) {
+              $("#response-internal-server-error").append(
+                  Mustache.render($(template).filter("#response-error-template").html(), response));
+            });
+          } else {
+            $.get(proxy_path + "templates/index-page-template.html", function(template) {
+              clusterSummary.append(Mustache.render($(template).filter("#cluster-summary-template").html(), response));
+              $("#cluster-summary-table").DataTable({
+                paging : false,
+                info : false,
+                searching : false
+              });
+              $('#cluster-summary [data-toggle="tooltip"]').tooltip();
+            });
+          }
+        });
+        showTopologySummary();
+      });
+  $(function() {
+    tabs($("#ulSummary a"), $('#container01 .summary'));
+  });
+  var tabs = function(tab, con) {
+    tab.click(function() {
+      var indx = tab.index(this);
+      tab.removeClass('active');
+      $(this).addClass('active');
+      con.hide();
+      loadSummary(con.eq(indx).attr("id"));
+      con.eq(indx).show();
+    })
+  };
+  function showTopologySummary() {
+    $('#container01 .summary').hide();
+    $("#ulSummary a").eq(0).addClass('active');
+    loadSummary($('#container01 .summary').eq(0).attr("id"));
+    $('#container01 .summary').eq(0).show();
+  }
+
+  function loadSummary(id) {
+    var proxy_path = proxyPath();
+    var template = $.get(proxy_path + "templates/index-page-template.html");
+    var nimbusSummary = $("#nimbus-summary");
+    var topologySummary = $("#topology-summary");
+    var supervisorSummary = $("#supervisor-summary");
+    var config = $("#nimbus-configuration");
+    if (id == "nimbus-summary") {
+      $.getJSON(proxy_path + "api/v1/cluster/nimbuses", function(response, status, jqXHR) {
+        if (response["result_code"] == 500) {//exception
+          $.get(proxy_path + "templates/response-error-template.html", function(template) {
+            $("#response-internal-server-error").append(
+                Mustache.render($(template).filter("#response-error-template").html(), response));
+          });
+        } else {
+          $.get(proxy_path + "templates/index-page-template.html", function(template) {
+            nimbusSummary.empty();
+            nimbusSummary.append(Mustache.render($(template).filter("#nimbus-summary-template").html(), response));
+            dtAutoPage("#nimbus-summary-table", {
+              columnDefs : [ {
+                type : "num",
+                targets : [ 3 ]
+              }, {
+                type : "time-str",
+                targets : [ 1, 2 ]
+              } ]
+            });
+            $('#nimbus-summary [data-toggle="tooltip"]').tooltip();
+          });
+        }
+      });
+    } else if (id == "supervisor-summary") {
+      $.getJSON(proxy_path + "api/v1/supervisor/summary", function(response, status, jqXHR) {
+        if (response["result_code"] == 500) {//exception
+          $.get(proxy_path + "templates/response-error-template.html", function(template) {
+            $("#response-internal-server-error").append(
+                Mustache.render($(template).filter("#response-error-template").html(), response));
+          });
+        } else {
+          $.get(proxy_path + "templates/index-page-template.html", function(template) {
+            supervisorSummary.empty();
+            supervisorSummary.append(Mustache.render($(template).filter("#supervisor-summary-template").html(),
+                response));
+            /*if (response["supervisors"].length > 0) {
+              $("#supervisor-summary-table").tablesorter({
+                sortList : [ [ 0, 0 ] ],
+                headers : {
+                  3 : {
+                    sorter : "stormtimestr"
+                  }
+                }
+              });
+            }*/
+            dtAutoPage("#supervisor-summary-table", {
+              columnDefs : [ {
+                type : "num",
+                targets : [ 4, 5 ]
+              }, {
+                type : "time-str",
+                targets : [ 2, 3 ]
+              } ]
+            });
+            $('#supervisor-summary [data-toggle="tooltip"]').tooltip();
+          });
+        }
+      });
+    } else if (id == "topology-summary") {
+      $.getJSON(proxy_path + "api/v1/topology/summary", function(response, status, jqXHR) {
+        if (response["result_code"] == 500) {//exception
+          $.get(proxy_path + "templates/response-error-template.html", function(template) {
+            $("#response-internal-server-error").append(
+                Mustache.render($(template).filter("#response-error-template").html(), response));
+          });
+        } else {
+          $.get(proxy_path + "templates/index-page-template.html", function(template) {
+            topologySummary.empty();
+            topologySummary.append(Mustache.render($(template).filter("#topology-summary-template").html(), response));
+            dtAutoPage("#topology-summary-table", {
+              columnDefs : [ {
+                type : "num",
+                targets : [ 6, 7, 8 ]
+              }, {
+                type : "time-str",
+                targets : [ 4 ]
+              } ]
+            });
+            $('#topology-summary [data-toggle="tooltip"]').tooltip();
+            $("#topology-summary-table > tbody tr").each(function() {
+              if ($(this).find("#workersTotal").text() == 0) {
+                $(this).find("#name").html($(this).find("#name").text());
+                $(this).find("#executorsTotal").html($(this).find("#executorsTotal").text());
+                $(this).find("#workersTotal").html($(this).find("#workersTotal").text());
+              }
+              if ($(this).find("#status").text() == 'ACTIVE') {
+                $(this).find("#activateButton").attr("disabled", "disabled");
+                $(this).find("#deactivateButton").removeAttr("disabled");
+              } else {
+                $(this).find("#deactivateButton").attr("disabled", "disabled");
+                $(this).find("#activateButton").removeAttr("disabled");
+              }
+            });
+          });
+        }
+      });
+    } else if (id == "nimbus-configuration") {
+      $.getJSON(proxy_path + "api/v1/cluster/configuration", function(response, status, jqXHR) {
+        if (response["result_code"] == 500) {//exception
+          $.get(proxy_path + "templates/response-error-template.html", function(template) {
+            $("#response-internal-server-error").append(
+                Mustache.render($(template).filter("#response-error-template").html(), response));
+          });
+        } else {
+          var formattedResponse = formatConfigData(response);
+          $.get(proxy_path + "templates/index-page-template.html", function(template) {
+            config.empty();
+            config.append(Mustache.render($(template).filter("#configuration-template").html(), formattedResponse));
+            /*$("#nimbus-configuration-table").tablesorter({
+              sortList : [ [ 0, 0 ] ],
+              headers : {}
+            });*/
+            $('#nimbus-configuration-table td').jsonFormatter()
+            //key, value
+            dtAutoPage("#nimbus-configuration-table", {});
+            $('#nimbus-configuration [data-toggle="tooltip"]').tooltip();
+          });
+        }
+      });
+    }
+  }
+</script>
+</html>

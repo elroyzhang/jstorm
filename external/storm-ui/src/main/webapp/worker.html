@@ -1,0 +1,228 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Worker Metrics</title>
+<base href="" />
+<base target="_self" />
+<script type="text/javascript">
+  var new_path = location.pathname;
+  var baseUrl = 'http://' + location.host;
+  if (null != new_path) {
+    var reg = /(\/proxy\/application_[0-9]_[0-9]\/)|(\/port_[0-9]*\/)/;
+    var regRet = reg.exec(new_path);
+    if (null != regRet) {
+      baseUrl = baseUrl + regRet[0];
+    } else {
+      baseUrl = baseUrl + "/";
+    }
+  }
+  document.getElementsByTagName("base")[0].href = baseUrl;
+</script>
+<link href="css/bootstrap-3.3.1.min.css" rel="stylesheet"
+ type="text/css">
+<link href="css/jquery.dataTables.1.10.4.min.css" rel="stylesheet"
+ type="text/css">
+<link href="css/dataTables.bootstrap.css" rel="stylesheet"
+ type="text/css">
+<link href="css/style.css" rel="stylesheet" type="text/css">
+<script src="js/jquery-1.11.1.min.js" type="text/javascript"></script>
+<script src="js/jquery.dataTables.1.10.4.min.js" type="text/javascript"></script>
+<script src="js/jquery.cookies.2.2.0.min.js" type="text/javascript"></script>
+<script src="js/jquery.mustache.js" type="text/javascript"></script>
+<script src="js/url.min.js" type="text/javascript"></script>
+<script src="js/bootstrap-3.3.1.min.js" type="text/javascript"></script>
+<script src="js/jquery.blockUI.min.js" type="text/javascript"></script>
+<script src="js/moment.min.js" type="text/javascript"></script>
+<script src="js/dataTables.bootstrap.min.js" type="text/javascript"></script>
+<script src="js/script.js" type="text/javascript"></script>
+</head>
+<body ng-app="workerJvm" ng-strict-di>
+ <h1>
+  <a href="javascript:go('')">Storm UI</a>
+ </h1>
+ <div id="divJvm"></div>
+ <p id="toggle-switch" style="display: block;" class="js-only"></p>
+</body>
+</html>
+<script>
+  $(document).ajaxStop($.unblockUI);
+  $(document).ajaxStart(function() {
+    if ($("#topology-visualization").children().size() == 0) {
+      $.blockUI({
+        message : '<img src="images/spinner.gif" /> <h3>Loading topology summary...</h3>'
+      });
+    }
+  });
+  $(document).ready(
+      function() {
+        var proxy_path = proxyPath();
+        var topologyId = $.url("?topology_id");
+        var sys = $.cookies.get("sys") || "false";
+        var url = proxy_path + "api/v1/topology/workers?tid=" + topologyId + "&sys=" + sys;
+        var divJvm = $("#divJvm");
+        renderToggleSys($("#toggle-switch"));
+        $.getJSON(url, function(data, status, jqXHR) {
+          if (data["result_code"] == 500) {
+            divJvm.empty();
+          } else {
+            if (data == null || data.length < 1) {
+              divJvm.append("<h2>There are no worker data now, wait a minute!!</h2>");
+              return;
+            }
+            for (var i = 0; i < data.length; i++) {
+              var workerJvmInfo = data[i];
+              var topologyId = workerJvmInfo["topologyId"];
+              var component = workerJvmInfo["component"];
+              var host = workerJvmInfo["host"];
+              var port = workerJvmInfo["port"];
+              var workerLogLink = workerJvmInfo["workerLogLink"];
+              var uptimeSecs = workerJvmInfo["uptimeSecs"];
+              var startTime = workerJvmInfo["startTime"];
+              var workerInfo = workerJvmInfo["workerInfo"];
+              var memoryNonHeap = workerJvmInfo["memory/nonHeap"];
+              var memoryHeap = workerJvmInfo["memory/heap"];
+              var gcPSScavenge = workerJvmInfo["GC/PSScavenge"];
+              var gcPSMarkSweep = workerJvmInfo["GC/PSMarkSweep"];
+              var jvmTime = workerJvmInfo["jvmTime"];
+              var processInfo = workerJvmInfo["processInfo"];
+
+              var detailDiv = $('<div style="border:1px solid"></div>');
+              var workerDiv = $('<div></div>');
+              renderWorkerDiv(workerDiv, topologyId, component, host, port, workerLogLink, uptimeSecs, startTime,
+                  workerInfo, jvmTime, processInfo);
+              var memoryDiv = $('<div></div>');
+              renderMemoryDiv(memoryDiv, memoryHeap, memoryNonHeap);
+              var gcDiv = $('<div></div>');
+              renderGCDiv(gcDiv, gcPSScavenge, gcPSMarkSweep);
+              detailDiv.append(workerDiv);
+              detailDiv.append(memoryDiv);
+              detailDiv.append(gcDiv);
+              divJvm.append(detailDiv);
+              divJvm.append("<br>");
+            }
+          }
+        });
+      });
+
+  function renderWorkerDiv(workerDiv, topologyId, component, host, port, workerLogLink, uptimeSecs, startTime,
+      workerInfo, jvmTime, processInfo) {
+    workerDiv.append('<h3>Worker--<a href="javascript:window.open(' + "'" + workerLogLink + '\', \'_blank\')">' + host
+        + ':' + port + '</h3>');
+    var physicalMem = '';
+    var cpuUsed = '';
+    var memUsed = '';
+    if (processInfo != null) {
+      physicalMem = processInfo['processPhysicalMemoryUsed'];
+      cpuUsed = processInfo['processCPUUsed'];
+      memUsed = processInfo['processMemeoryUsed'];
+    }
+    var table = $('<table style="width:100%" class="table table-bordered"></table>');
+    var thead = $('<thead class="info"><tr class="info"><th>Topology</th><th>Component</th><th>Process Physical Mem</th><th>Process CPU Used</th>'
+        + '<th>Process Mem Used</th><th>Start Time</th><th>Uptime</th></tr></thead>');
+    var tbody = $('<tbody></tbody>');
+    var contentTr = $('<tr></tr>');
+    var topologyTd = '<td><a href="javascript:void(0)" onClick="javascript:window.open(' + '\'topology.html?id='
+        + topologyId + '\', \'_blank\')">' + topologyId + '</a></td>';
+    component = component.substring(1, component.length - 1);
+    var cids = component.split(",");
+    var cidsStr = '';
+    for (var i = 0; i < cids.length; i++) {
+      var cid = cids[i];
+      cid = cid.trim();
+      if (cid == '') {
+        continue;
+      }
+      cidsStr += ' <a href="javascript:void(0)" onClick="javascript:window.open(' + '\'component.html?component=' + cid
+          + '&id=' + topologyId + '\', \'_blank\')">' + cid + '</a> ';
+      if (i != cids.length - 1) {
+        cidsStr += "|";
+      }
+
+    }
+    var componentTd = '<td>' + cidsStr + '</td>';
+    var physicalmemTd = '<td>' + physicalMem + ' </td>';
+    var cpuUsedTd = '<td>' + cpuUsed + '</td>';
+    var memUsedTd = '<td>' + memUsed + '</td>';
+    var startTimeTd = '<td>' + startTime + '</td>';
+    var uptimeSecsTd = '<td>' + uptimeSecs + '</td>';
+    contentTr.append(topologyTd);
+    contentTr.append(componentTd);
+    contentTr.append(physicalmemTd);
+    contentTr.append(cpuUsedTd);
+    contentTr.append(memUsedTd);
+    contentTr.append(startTimeTd);
+    contentTr.append(uptimeSecsTd);
+    tbody.append(contentTr);
+    table.append(thead);
+    table.append(tbody);
+    workerDiv.append(table);
+  }
+  function renderMemoryDiv(memoryDiv, memoryHeap, memoryNonHeap) {
+    if (memoryHeap == null || memoryNonHeap == null) {
+      return;
+    }
+    var heapCommiitedMB = memoryHeap['committedMB'];
+    var heapInitMB = memoryHeap['initMB'];
+    var heapMaxMB = memoryHeap['maxMB'];
+    var nonHeapCommiitedMB = memoryNonHeap['committedMB'];
+    var nonHeapInitMB = memoryNonHeap['initMB'];
+    var nonHeapMaxMB = memoryNonHeap['maxMB'];
+    var totalCommiitedMb = parseInt(heapCommiitedMB) + parseInt(nonHeapCommiitedMB);
+    var totalInitMb = parseInt(heapInitMB) + parseInt(nonHeapInitMB);
+    var totalMaxMb = parseInt(heapMaxMB) + parseInt(nonHeapMaxMB);
+    memoryDiv.append('<h4>Memory JVM(Heap/Non-Heap)</h4>');
+    var table = $('<table style="width:100%" class="table table-bordered"></table>');
+    var thead = $('<thead><tr class="info"><th>Type</th><th>Committed</th><th>Initial</th><th>Maximum</th></tr></thead>');
+    var tbody = $('<tbody></tbody>');
+    var heapTr = '<tr><td>Heap</td><td>' + heapCommiitedMB + ' MB</td><td>' + heapInitMB + ' MB</td><td>' + heapMaxMB
+        + ' MB</td></tr>';
+    var nonHeapTr = '<tr><td>Non-Heap</td><td>' + nonHeapCommiitedMB + ' MB</td><td>' + nonHeapInitMB + ' MB</td><td>'
+        + nonHeapMaxMB + ' MB</td></tr>';
+    var totalTr = '<tr><td>Total</td><td>' + totalCommiitedMb + ' MB</td><td>' + totalInitMb + ' MB</td><td>'
+        + totalMaxMb + ' MB</td></tr>';
+    tbody.append(heapTr);
+    tbody.append(nonHeapTr);
+    tbody.append(totalTr);
+    table.append(thead);
+    table.append(tbody);
+    memoryDiv.append(table);
+  }
+  function renderGCDiv(gcDiv, gcPSScavenge, gcPSMarkSweep) {
+    if (gcPSScavenge == null || gcPSMarkSweep == null) {
+      return;
+    }
+    var gcPssCount = gcPSScavenge['count'];
+    var gcPssTimeMs = gcPSScavenge['timeMs'];
+    var gcPsmCount = gcPSMarkSweep['count'];
+    var gcPsmTimeMs = gcPSMarkSweep['timeMs'];
+    gcDiv.append('<h4>Garbage Collection</h4>');
+    var table = $('<table style="width:100%" class="table table-bordered"></table>');
+    var thead = $('<thead><tr class="info"><th>Collector</th><th>Count</th><th>Time</th></tr></thead>');
+    var tbody = $('<tbody></tbody>');
+    var gcPssTr = '<tr><td>PS-MarkSweep</td><td>' + gcPssCount + '</td><td>' + gcPssTimeMs + ' ms</td></tr>';
+    var gcPsmTr = '<tr><td>PS-Scavenge</td><td>' + gcPsmCount + '</td><td>' + gcPsmTimeMs + ' ms</td></tr>';
+    tbody.append(gcPssTr);
+    tbody.append(gcPsmTr);
+    table.append(thead);
+    table.append(tbody);
+    gcDiv.append(table);
+  }
+</script>
+</html>

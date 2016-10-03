@@ -1,0 +1,259 @@
+#!/usr/bin/env bash
+
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+
+. "$bin"/storm-config.sh
+
+function print_usage(){
+  echo "Usage: storm [--config confdir] COMMAND"
+  echo "         COMMAND       : Syntax"
+  echo "           nimbus      : storm nimbus"
+  echo "           supervisor  : storm supervisor"
+  echo "           drpc        : storm drpc"
+  echo "           dev-zookeeper  : storm dev-zookeeper"
+  echo "           jar         : storm jar topology-jar-path class ..."
+  echo "           rebalance   : storm rebalance topology-name [-w wait-time-secs] [-n new-num-workers] [-e component=parallelism]*" 
+  echo "           kill        : storm kill topology-name [-w wait-time-secs]"
+  echo "           activate    : storm activate topology-name"
+  echo "           deactivate  : storm deactivate topology-name"
+  echo "           list        : storm list [detail]"
+  echo "           leader      : storm leader"
+  echo "           upload_credentials      : storm upload_credentials topology-name [credkey credvalue]*"
+  echo "           set_log_level      : storm set_log_level [topology name] -l [logger name]=[log level][:optional timeout] -r [logger name]"
+  echo "           debug      : storm debug topology-name [-e true or false] -[s sampling-percentage] [-c component]"
+  echo " "
+  echo "           classpath   : storm classpath"
+  echo "           node-health-check   : storm node-health-check"
+  echo " "
+  echo "          monitor   : storm monitor topology-name [-i interval-secs] [-m component-id] [-s stream-id] [-w [emitted | transferred]]"
+  echo "           version     : storm version"
+  echo "           config-value  : storm config-value $param-name"
+  echo "           shell-submission  : storm shell-submission"
+  echo "           killworkers  : storm killworkers"
+  echo "           backpressure  : storm backpressure -n topology-name"
+  echo "           resource    : storm resource [-h hostname]"
+  echo "Help: "
+  echo "    help"
+}
+
+TRANSFER_CLASS=""
+
+function transferjar(){
+  export CLASSPATH=$CLASSPATH
+  CLASS="org.apache.storm.daemon.ClientJarTransformerRunner"
+  "$JAVA" $TYPE $JAVA_HEAP_MAX $DAEMON_NAME $STORM_OPTS $LOG_FILE $CLASS $@
+}
+
+function confvalue(){
+  export CLASSPATH=$CLASSPATH
+  CLASS="org.apache.storm.command.ConfigValue"
+  cvalue=`exec "$JAVA" $TYPE $JAVA_HEAP_MAX $DAEMON_NAME $STORM_OPTS $LOG_FILE $CLASS  $1`
+  TRANSFER_CLASS=${cvalue:7}
+}
+
+
+if [ $# = 0 ]; then
+  print_usage
+  exit
+fi
+
+COMMAND=$1
+LOG_FILE="-Dlogfile.name=operations.log"
+DAEMON_NAME="-Ddaemon.name="$COMMAND
+case $COMMAND in
+   help|classpath)
+    if [ "$COMMAND" = "help" ] ; then 
+      print_usage
+      exit
+    elif [ "$COMMAND" = "classpath" ] ; then
+      echo $CLASSPATH 
+    else 
+      CLASS=$COMMAND
+    fi
+    ;;
+   jar)
+    if [ $# -lt  3 ] ; then 
+      echo "Warn: jar command neeed at least 2 args !"
+      echo "Usage : "
+      echo "storm jar jar_dir main_class [ topology_name [ args ]]"
+      exit
+    fi
+
+    TYPE="-client"
+    JAR_FILE=$2
+    if [ ! -f "$JAR_FILE" ]; then
+      echo "Jar File " $JAR_FILE  " does not exists!"
+      exit
+    fi
+
+   # for backtype transfer to org.apache
+    confvalue "client.jartransformer.class"
+    if [[ $TRANSFER_CLASS != "" &&  $TRANSFER_CLASS != "null" ]] ; then
+       tmpjar=/tmp/$RANDOM.jar
+       transferjar $TRANSFER_CLASS $JAR_FILE $tmpjar
+       JAR_FILE=$tmpjar
+    fi
+
+    STORM_JAR="-Dstorm.jar=$JAR_FILE"
+    KCLASS=$3
+    if $cygwin; then
+      CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+    fi
+    export CLASSPATH=$CLASSPATH:$JAR_FILE
+    "$JAVA" $TYPE $JAVA_HEAP_MAX $DAEMON_NAME $STORM_OPTS $LOG_FILE $STORM_JAR $KCLASS "${@:4}"
+    if [ $tmpjar ] ; then
+      exec rm $tmpjar
+    fi
+    ;;
+
+   kill|activate|deactivate|rebalance|list|leader|shell|cli|killworkers|node-health-check|upload_credentials|set_log_level|debug|backpressure|resource|monitor)
+    if [ "$COMMAND" = "kill" ] ; then
+      CLASS=org.apache.storm.command.KillTopology
+      TYPE="-client"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "activate" ] ; then
+      CLASS=org.apache.storm.command.Activate
+      TYPE="-client"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "deactivate" ] ; then
+      CLASS=org.apache.storm.command.Deactivate
+      TYPE="-client"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "list" ] ; then
+      CLASS=org.apache.storm.command.ListTopologies
+      TYPE="-client"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "leader" ] ; then
+      CLASS=com.tencent.jstorm.command.NimbusLeader
+      TYPE="-client"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "cli" ] ; then
+      CLASS=com.tencent.jstorm.cli.StormCli
+      TYPE="-client"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "shell" ] ; then
+      CLASS=backtype.storm.command.shellSubmission
+      TYPE="-client"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "rebalance" ] ; then
+      CLASS=org.apache.storm.command.Rebalance
+      TYPE="-client"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "killworkers" ] ; then
+      CLASS=org.apache.storm.command.KillWorkers
+      TYPE="-client"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "node-health-check" ] ; then
+      CLASS=org.apache.storm.command.HealthCheck
+      TYPE="-client"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS" 
+    elif [ "$COMMAND" = "upload_credentials" ] ; then
+      CLASS=org.apache.storm.command.UploadCredentials
+      TYPE="-client"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "set_log_level" ] ; then
+      CLASS=org.apache.storm.command.SetLogLevel
+      TYPE="-client"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"    
+    elif [ "$COMMAND" = "debug" ] ; then
+      CLASS=com.tencent.jstorm.command.TopologyDebug
+      TYPE="-client"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "backpressure" ] ; then
+      CLASS=com.tencent.jstorm.command.ShowBackpressure
+      TYPE="-client"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "resource" ] ; then
+      CLASS=com.tencent.jstorm.command.ShowResource
+      TYPE="-client"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "monitor" ] ; then
+      CLASS=org.apache.storm.command.Monitor
+      TYPE="-client"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    else
+      CLASS=$COMMAND
+    fi
+    shift
+
+    if $cygwin; then
+      CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+    fi
+    export CLASSPATH=$CLASSPATH
+    exec "$JAVA" $TYPE $JAVA_HEAP_MAX $DAEMON_NAME $STORM_OPTS $LOG_FILE $CLASS "$@"
+    ;;
+
+   *)
+    # the core commands
+    if [ "$COMMAND" = "nimbus" ] ; then
+      CLASS=com.tencent.jstorm.daemon.nimbus.NimbusServer
+      TYPE="-server"
+      LOG_FILE="-Dlogfile.name=nimbus.log"
+      JAVA_HEAP_MAX=$JAVA_NIBMUS_CHILDOPTS
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "supervisor" ] ; then
+      CLASS=org.apache.storm.daemon.supervisor.Supervisor
+      TYPE="-server"
+      JAVA_HEAP_MAX=$JAVA_SUPERVISOR_CHILDOPTS
+      LOG_FILE="-Dlogfile.name=supervisor.log"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "ui" ] ; then
+      CLASS=com.tencent.jstorm.ui.core.UIServer
+      TYPE="-server"
+      JAVA_HEAP_MAX=$JAVA_DRPC_CHILDOPTS
+      LOG_FILE="-Dlogfile.name=ui.log"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+      echo "UI Server Starting Now ... ..."
+    elif [ "$COMMAND" = "logviewer" ] ; then
+      CLASS=com.tencent.jstorm.daemon.logviewer.LogViewer
+      TYPE="-server"
+      JAVA_HEAP_MAX=$JAVA_DRPC_CHILDOPTS
+      LOG_FILE="-Dlogfile.name=logviewer.log"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+      echo "LogViewer Server Starting Now ... ..."
+    elif [ "$COMMAND" = "drpc" ] ; then
+      CLASS=org.apache.storm.daemon.DrpcServer
+      TYPE="-server"
+      JAVA_HEAP_MAX=$JAVA_DRPC_CHILDOPTS
+      LOG_FILE="-Dlogfile.name=drpc.log"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+      echo "DRPC Server Starting Now ... ..."
+    elif [ "$COMMAND" = "dev-zookeeper" ] ; then
+      CLASS=org.apache.storm.command.DevZookeeper
+      TYPE="-server"
+      JAVA_HEAP_MAX=$JAVA_DRPC_CHILDOPTS
+      LOG_FILE="-Dlogfile.name=dev-zookeeper.log"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "rest" ] ; then
+      CLASS=com.tencent.jstorm.rest.RESTWebServer
+      TYPE="-server"
+      JAVA_HEAP_MAX=$JAVA_DRPC_CHILDOPTS
+      LOG_FILE="-Dlogfile.name=rest.log"
+      STORM_CLIENT_OPTS="${STORM_CLIENT_OPTS}  -Djava.net.preferIPv4Stack=true"
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+      echo "REST Server Starting Now ... ..."
+    elif [ "$COMMAND" = "version" ] ; then
+      CLASS=org.apache.storm.utils.VersionInfo
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "config-value" ] ; then
+      CLASS=org.apache.storm.command.ConfigValue
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    elif [ "$COMMAND" = "shell-submission" ] ; then
+      CLASS=backtype.storm.command.shellSubmission
+      STORM_OPTS="$STORM_OPTS $STORM_CLIENT_OPTS"
+    else
+      echo "WARNINNG: Do not known such command: " $COMMAND
+      print_usage
+      exit
+    fi
+    shift
+    
+    #if $cygwin; then
+    #  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+    #fi
+    export CLASSPATH=$CLASSPATH
+    exec "$JAVA" $TYPE $JAVA_HEAP_MAX $DAEMON_NAME $STORM_OPTS $LOG_FILE $CLASS "$@"
+    ;;
+esac
+

@@ -1,0 +1,27 @@
+<NotepadPlus>	
+	<AutoComplete language="STORM">
+		<Environment ignoreCase="yes" startFunc="(" stopFunc=")" paramSeparator="," terminal=";" />
+		<KeyWord name="BOLT" func="yes">
+			<Overload retVal="BOLT" descr="returns the BOLT value of bolt_classname with parallelism_hint">
+			<Param name="STRING bolt_classname, Integer parallelism_hint " />
+			</Overload>
+		</KeyWord>
+      	<KeyWord name="SET"></KeyWord>
+		<KeyWord name="SPOUT" func="yes">
+			<Overload retVal="SPOUT" descr="returns the SPOUT value of bolt_classname with parallelism_hint">
+			<Param name="STRING bolt_classname, Integer parallelism_hint " />
+			</Overload>
+		</KeyWord>
+		<KeyWord name="REGISTER"></KeyWord>
+        <KeyWord name="SHUFFLE" func="yes">
+			<Overload retVal="SHUFFLE" descr="returns the SHUFFLE value of component_name">
+			<Param name="STRING component_name " />
+			</Overload>
+		</KeyWord>
+         <KeyWord name="FIELDS" func="yes">
+			<Overload retVal="FIELDS" descr="returns the FIELDS value of component_name with fields: field_1,field_2, ... ">
+			<Param name="STRING component_name, STRING field_1, STRING field_2, ..." />
+			</Overload>
+		</KeyWord>
+	</AutoComplete>	
+</NotepadPlus>

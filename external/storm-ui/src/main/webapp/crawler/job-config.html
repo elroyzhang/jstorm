@@ -1,0 +1,197 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Cralwer Job Manage</title>
+<base href="" />
+<base target="_self" />
+<script type="text/javascript">
+  var new_path = location.pathname;
+  var baseUrl = 'http://' + location.host;
+  if (null != new_path) {
+    var reg = /(\/proxy\/application_[0-9]_[0-9]\/)|(\/port_[0-9]*\/)/;
+    var regRet = reg.exec(new_path);
+    if (null != regRet) {
+      baseUrl = baseUrl + regRet[0];
+    } else {
+      baseUrl = baseUrl + "/";
+    }
+  }
+  document.getElementsByTagName("base")[0].href = baseUrl;
+</script>
+<link href="css/bootstrap-3.3.1.min.css" rel="stylesheet"
+ type="text/css">
+<link href="css/jquery.dataTables.1.10.4.min.css" rel="stylesheet"
+ type="text/css">
+<link href="css/dataTables.bootstrap.css" rel="stylesheet"
+ type="text/css">
+<link href="css/jsonFormatter.min.css" rel="stylesheet" type="text/css">
+<link href="css/style.css" rel="stylesheet" type="text/css">
+<script src="js/jquery-1.11.1.min.js" type="text/javascript"></script>
+<script src="js/jquery.dataTables.1.10.4.min.js" type="text/javascript"></script>
+<script src="js/jquery.cookies.2.2.0.min.js" type="text/javascript"></script>
+<script src="js/jquery.mustache.js" type="text/javascript"></script>
+<script src="js/bootstrap-3.3.1.min.js" type="text/javascript"></script>
+<script src="js/jquery.blockUI.min.js" type="text/javascript"></script>
+<script src="js/dataTables.bootstrap.min.js" type="text/javascript"></script>
+<script src="js/jsonFormatter.min.js" type="text/javascript"></script>
+<script src="js/script.js" type="text/javascript"></script>
+</head>
+<body>
+ <div id="crawler-job-action" style="padding-top: 5px;">
+  <input onclick="createJobConf()" type="button"
+   value="Create Job Config" class="btn btn-info"></input>
+ </div>
+ <div id="crawler-job-list"></div>
+ <div id="response-internal-server-error"></div>
+</body>
+<script>
+  $(document).ajaxStop($.unblockUI);
+  $(document).ajaxStart(function() {
+    $.blockUI({
+      message : '<img src="images/spinner.gif" /> <h3>Loading job summary...</h3>'
+    });
+  });
+  $(document).ready(
+      function() {
+        var proxy_path = proxyPath();
+        var url = proxy_path + "api/v1/crawler/jobs-summary";
+        renderToggleSys($("#toggle-switch"));
+        $.ajaxSetup({
+          "error" : function(jqXHR, textStatus, response) {
+            var errorJson = jQuery.parseJSON(jqXHR.responseText);
+            $.get(proxy_path + "templates/json-error-template.html", function(template) {
+              $("#json-response-error").append(
+                  Mustache.render($(template).filter("#json-error-template").html(), errorJson));
+            });
+          }
+        });
+
+        $.getJSON(url, function(response, status, jqXHR) {
+          var crawlerJobList = $("#crawler-job-list");
+          if (response["result_code"] == 500) {//exception
+            $.get(proxy_path + "templates/response-error-template.html", function(template) {
+              $("#response-internal-server-error").append(
+                  Mustache.render($(template).filter("#response-error-template").html(), response));
+            });
+          } else {
+            $.get(proxy_path + "crawler/templates/job-config-template.html",
+                function(template) {
+                  crawlerJobList.append(Mustache.render($(template).filter("#crawler-job-conf-template").html(),
+                      response));
+                  dtAutoPage("#crawler-job-table", { 
+                    "aaSorting": [[ 0, "desc" ]]
+                  });
+                });
+          }
+        });
+      });
+
+  function createJobConf() {
+    /* var retVal = window.open(proxyPath() + 'crawler/job-content.html?action=create', 
+    		    '_blank', 
+    		    'status:no;scroll:no;'); */
+    var retVal = window.showModalDialog('crawler/job-content-new.html?action=create', '_blank',
+        'status:no;scroll:no;dialogheight:900px;dialogwidth:800px;');
+    if (retVal == true || retVal == "true") {
+      window.location.reload();
+    }
+  }
+
+
+  function getChooseJobs() {
+    var chooseJob = {};
+    var jobIds = "";
+    var tnames = "";
+    $("#crawler-job-table > tbody tr").each(function() {
+      if ($(this).find("#jobCheck").prop("checked") == true || $(this).find("#jobCheck").prop("checked")) {
+        var jobId = $(this).find("#siteId").text();
+        jobIds += jobId + ",";
+        var topologyName = $(this).find("#name").text();
+        if (topologyName != null && topologyName != "") {
+          tnames += topologyName + ",";
+        }
+      }
+    });
+    chooseJob['jobIds'] = jobIds;
+    chooseJob['tnames'] = tnames;
+    return chooseJob;
+  }
+
+  function selectAllJobs() {
+    var checkAll = $("#selectAll").prop("checked");
+    $("#crawler-job-table > tbody tr").each(function() {
+      if (checkAll == true || "checked" == checkAll) {
+        $(this).find("#jobCheck").prop("checked", checkAll);
+      } else {
+        $(this).find("#jobCheck").prop("checked", false);
+      }
+    });
+  }
+  function startJob(siteId) {
+    window
+        .showModalDialog('submit-topology.html', '_blank', 'status:no;scroll:no;dialogheight:500px;dialogwidth:600px');
+  }
+  function stopJob(btn) {
+    var tname = $(btn).parent().parent().find("#name").text();
+    if (tname == "" || tname == null) {
+      alert("The job not start!!!");
+      return;
+    }
+    if (!confirm("Do you really want to stop job :" + tname)) {
+      return;
+    }
+    var stopJobBtn = $("input[id='btnStopJob']");
+    stopJobBtn.prop("disabled", "disabled");
+    var url = proxyPath() + "api/v1/topology?tname=" + tname;
+    $.ajax({
+      url : url,
+      dataType : "json",
+      async : false,
+      type : "DELETE",
+      success : function(data) {
+        var resultCode = data["result_code"];
+        alert(data["result_msg"]);
+        window.location.reload();
+      }
+    });
+    stopJobBtn.removeAttr("disabled");
+  }
+  function deleteJob(siteId) {
+    if (!confirm("Do you really want to delete job config :" + siteId)) {
+      return;
+    }
+    var deleteJobBtn = $("input[id='btnDeleteJob']");
+    deleteJobBtn.prop("disabled", "disabled");
+    var url = proxyPath() + "api/v1/crawler/conf?site.id=" + siteId;
+    $.ajax({
+      url : url,
+      dataType : "json",
+      async : false,
+      type : "DELETE",
+      success : function(data) {
+        var resultCode = data["result_code"];
+        alert(data["result_msg"]);
+        window.location.reload();
+      }
+    });
+    deleteJobBtn.removeAttr("disabled");
+  }
+</script>
+</html>

@@ -1,0 +1,176 @@
+<!-- Licensed to the Apache Software Foundation (ASF) under one or more contributor 
+ license agreements. See the NOTICE file distributed with this work for additional 
+ information regarding copyright ownership. The ASF licenses this file to 
+ You under the Apache License, Version 2.0 (the "License"); you may not use 
+ this file except in compliance with the License. You may obtain a copy of 
+ the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required 
+ by applicable law or agreed to in writing, software distributed under the 
+ License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS 
+ OF ANY KIND, either express or implied. See the License for the specific 
+ language governing permissions and limitations under the License. -->
+<assembly
+ xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 http://maven.apache.org/xsd/assembly-1.1.0.xsd">
+ <id>bin</id>
+ <formats>
+  <format>dir</format>
+  <format>zip</format>
+ </formats>
+ <!-- put deps in the lib folder -->
+ <dependencySets>
+  <dependencySet>
+   <useProjectArtifact>false</useProjectArtifact>
+   <outputDirectory>lib</outputDirectory>
+   <unpack>false</unpack>
+  </dependencySet>
+ </dependencySets>
+ <fileSets>
+  <!-- $STORM_HOME/bin -->
+  <fileSet>
+   <directory>${project.basedir}/../../bin</directory>
+   <outputDirectory>bin</outputDirectory>
+   <includes>
+    <include>**/*</include>
+   </includes>
+   <fileMode>0755</fileMode>
+  </fileSet>
+  <!-- $STORM_HOME/public -->
+  <fileSet>
+   <directory>${project.basedir}/../../jstorm-core/src/ui/public</directory>
+   <outputDirectory>public</outputDirectory>
+   <includes>
+    <include>*/**</include>
+   </includes>
+   <excludes />
+  </fileSet>
+  <!-- $STORM_HOME/conf -->
+  <fileSet>
+   <directory>${project.basedir}/../../conf</directory>
+   <outputDirectory>/conf</outputDirectory>
+   <includes>
+    <include>**/*</include>
+   </includes>
+   <fileMode>0644</fileMode>
+  </fileSet>
+  <!-- $STORM_HOME/logs -->
+  <fileSet>
+   <directory>${project.basedir}/../../logs</directory>
+   <outputDirectory>/logs</outputDirectory>
+  </fileSet>
+  <!-- $STORM_HOME/webapps -->
+  <fileSet>
+   <directory>${project.basedir}/../../jstorm-core/src/webapps</directory>
+   <outputDirectory>/webapps</outputDirectory>
+   <includes>
+    <include>**/*</include>
+   </includes>
+  </fileSet>
+  <!-- $STORM_HOME/webapps/storm-ui -->
+  <fileSet>
+   <directory>${project.basedir}/../../external/storm-ui/src/main/webapp</directory>
+   <outputDirectory>/webapps/storm-ui</outputDirectory>
+   <includes>
+    <include>**/*</include>
+   </includes>
+  </fileSet>
+  <fileSet>
+   <directory>${project.basedir}/../../external/storm-ui/shells</directory>
+   <outputDirectory>bin</outputDirectory>
+   <includes>
+    <include>**/*</include>
+   </includes>
+   <fileMode>0755</fileMode>
+  </fileSet>
+  <!-- $STORM_HOME/external/storm-ui/ -->
+  <fileSet>
+   <directory>${project.basedir}/../../external/storm-ui/target</directory>
+   <outputDirectory>/external/storm-ui/</outputDirectory>
+   <includes>
+    <include>storm-ui-${project.version}.jar</include>
+    <include>storm-ui.war</include>
+   </includes>
+  </fileSet>
+  <!-- $STORM_HOME/lib/native -->
+  <fileSet>
+   <directory>${project.basedir}/../../jstorm-core/src/native</directory>
+   <outputDirectory>/lib/native</outputDirectory>
+   <includes>
+    <include>**/*</include>
+   </includes>
+  </fileSet>
+  <!-- EXTERNAL -->
+  <!-- $STORM_HOME/webapps/storm-drpc -->
+  <fileSet>
+   <directory>${project.basedir}/../../external/storm-drpc/src/main/webapp</directory>
+   <outputDirectory>/webapps/storm-drpc</outputDirectory>
+   <includes>
+    <include>**/*</include>
+   </includes>
+  </fileSet>
+  <fileSet>
+   <directory>${project.basedir}/../../external/storm-drpc/bin</directory>
+   <outputDirectory>bin</outputDirectory>
+   <includes>
+    <include>**/*</include>
+   </includes>
+   <fileMode>0755</fileMode>
+  </fileSet>
+  <!-- $STORM_HOME/webapps -->
+  <fileSet>
+   <directory>${project.basedir}/../../jstorm-core/src/webapps</directory>
+   <outputDirectory>/webapps</outputDirectory>
+   <includes>
+    <include>**/*</include>
+   </includes>
+  </fileSet>
+  <!-- $STORM_HOME/external/storm-drpc/ -->
+  <fileSet>
+   <directory>${project.basedir}/../../external/storm-drpc/target</directory>
+   <outputDirectory>/external/storm-drpc/</outputDirectory>
+   <includes>
+    <include>storm-drpc-${project.version}.jar</include>
+   </includes>
+  </fileSet>
+  <!-- <fileSet> <directory>${project.basedir}/../../external/storm-yarn</directory> 
+   <outputDirectory>external/storm-yarn</outputDirectory> <includes> <include>README.*</include> 
+   </includes> </fileSet> <fileSet> <directory>${project.basedir}/../../external/storm-yarn/bin</directory> 
+   <outputDirectory>bin</outputDirectory> <includes> <include>**/*</include> 
+   </includes> </fileSet> -->
+  <!-- $STORM_HOME/conf <fileSet> <directory>${project.basedir}/../../external/storm-yarn/conf</directory> 
+   <outputDirectory>/conf</outputDirectory> <includes> <include>**/*</include> 
+   </includes> </fileSet> -->
+ </fileSets>
+ <files>
+  <!-- jstorm-core -->
+  <file>
+   <source>${project.basedir}/../../jstorm-core/target/jstorm-core-${project.version}.jar</source>
+   <outputDirectory>/lib/</outputDirectory>
+   <destName>jstorm-core-${project.version}.jar</destName>
+  </file>
+  <!-- EXAMPLES <file> <source>${project.basedir}/../../examples/storm-starter/target/storm-starter-${project.version}-jar-with-dependencies.jar</source> 
+   <outputDirectory>/examples/storm-starter/</outputDirectory> <destName>storm-starter-topologies-${project.version}.jar</destName> 
+   </file> -->
+  <!-- storm-yarn <file> <source>${project.basedir}/../../external/storm-yarn/target/storm-yarn-${project.version}.jar</source> 
+   <outputDirectory>/external/storm-yarn/</outputDirectory> <destName>storm-yarn-${project.version}.jar</destName> 
+   </file> -->
+  <!-- storm-scheduler -->
+  <!-- jstorm-rename-hack -->
+  <file>
+   <source>${project.basedir}/../../jstorm-rename-hack/target/jstorm-rename-hack-${project.version}.jar</source>
+   <outputDirectory>/lib/</outputDirectory>
+   <destName>jstorm-rename-hack-${project.version}.jar</destName>
+  </file>
+  <!-- jstorm-core -->
+  <file>
+   <source>${project.basedir}/../../examples/topology-example/target/topology-example-${project.version}.jar</source>
+   <outputDirectory>/examples/topology-example/</outputDirectory>
+   <destName>topology-example-${project.version}.jar</destName>
+  </file>
+  <file>
+   <source>${project.basedir}/../../examples/topology-example/target/topology-example-${project.version}.jar</source>
+   <outputDirectory>/topology-jar/</outputDirectory>
+   <destName>topology-example-${project.version}.jar</destName>
+  </file>
+ </files>
+</assembly>

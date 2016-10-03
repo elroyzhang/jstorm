@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/jstorm.iml" filepath="$PROJECT_DIR$/jstorm.iml" />
+      <module fileurl="file://$PROJECT_DIR$/jstorm-core/jstorm-core.iml" filepath="$PROJECT_DIR$/jstorm-core/jstorm-core.iml" />
+      <module fileurl="file://$PROJECT_DIR$/jstorm-rename-hack/jstorm-rename-hack.iml" filepath="$PROJECT_DIR$/jstorm-rename-hack/jstorm-rename-hack.iml" />
+      <module fileurl="file://$PROJECT_DIR$/storm-dist/binary/storm-dist.iml" filepath="$PROJECT_DIR$/storm-dist/binary/storm-dist.iml" />
+      <module fileurl="file://$PROJECT_DIR$/storm-buildtools/storm-maven-plugins/storm-maven-plugins.iml" filepath="$PROJECT_DIR$/storm-buildtools/storm-maven-plugins/storm-maven-plugins.iml" />
+      <module fileurl="file://$PROJECT_DIR$/external/storm-ui/storm-ui.iml" filepath="$PROJECT_DIR$/external/storm-ui/storm-ui.iml" />
+      <module fileurl="file://$PROJECT_DIR$/examples/topology-example/topology-example.iml" filepath="$PROJECT_DIR$/examples/topology-example/topology-example.iml" />
+    </modules>
+  </component>
+</project>

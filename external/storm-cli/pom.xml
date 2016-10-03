@@ -1,0 +1,36 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+ <modelVersion>4.0.0</modelVersion>
+ <parent>
+  <groupId>com.tencent.jstorm</groupId>
+  <artifactId>jstorm</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <relativePath>../../</relativePath>
+ </parent>
+ <artifactId>storm-cli</artifactId>
+ <name>${project.artifactId}-${project.version}</name>
+ <description>${project.artifactId}-${project.version}</description>
+ <dependencies>
+  <dependency>
+   <groupId>org.antlr</groupId>
+   <artifactId>antlrworks</artifactId>
+   <version>1.5.1</version>
+  </dependency>
+  <dependency>
+   <groupId>com.tencent.jstorm</groupId>
+   <artifactId>jstorm-core</artifactId>
+   <version>${project.version}</version>
+   <scope>provided</scope>
+  </dependency>
+  <dependency>
+   <groupId>jline</groupId>
+   <artifactId>jline</artifactId>
+   <version>0.9.94</version>
+  </dependency>
+  <dependency>
+   <groupId>org.antlr</groupId>
+   <artifactId>antlr-runtime</artifactId>
+   <version>3.4</version>
+  </dependency>
+ </dependencies>
+</project>

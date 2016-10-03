@@ -1,0 +1,153 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Storm UI</title>
+<base href="" />
+<base target="_self" />
+<script type="text/javascript">
+  var new_path = location.pathname;
+  var baseUrl = 'http://' + location.host;
+  if (null != new_path) {
+    var reg = /(\/proxy\/application_[0-9]_[0-9]\/)|(\/port_[0-9]*\/)/;
+    var regRet = reg.exec(new_path);
+    if (null != regRet) {
+      baseUrl = baseUrl + regRet[0];
+    } else {
+      baseUrl = baseUrl + "/";
+    }
+  }
+  document.getElementsByTagName("base")[0].href = baseUrl;
+</script>
+<link href="css/bootstrap-3.3.1.min.css" rel="stylesheet"
+ type="text/css">
+<link href="css/jquery.dataTables.1.10.4.min.css" rel="stylesheet"
+ type="text/css">
+<link href="css/dataTables.bootstrap.css" rel="stylesheet"
+ type="text/css">
+<link href="css/style.css" rel="stylesheet" type="text/css">
+<script src="js/jquery-1.11.1.min.js" type="text/javascript"></script>
+<script src="js/jquery.dataTables.1.10.4.min.js" type="text/javascript"></script>
+<script src="js/jquery.cookies.2.2.0.min.js" type="text/javascript"></script>
+<script src="js/jquery.mustache.js" type="text/javascript"></script>
+<script src="js/url.min.js" type="text/javascript"></script>
+<script src="js/bootstrap-3.3.1.min.js" type="text/javascript"></script>
+<script src="js/jquery.blockUI.min.js" type="text/javascript"></script>
+<script src="js/moment.min.js" type="text/javascript"></script>
+<script src="js/dataTables.bootstrap.min.js" type="text/javascript"></script>
+<script src="js/script.js" type="text/javascript"></script>
+<script src="crawler/js/job-content.js" type="text/javascript"></script>
+
+</head>
+<body style="text-align: center;">
+ <div id="divJobConfigTitle"><strong><p class="text-left text-primary" id="pJobConfig">Job Config:</p></strong></div>
+ <div style="align: center" id="divJobContent">
+  <form id="job-content-form">
+   <textarea rows="25" id="job-content" style="width: 98%; height: 60%"></textarea>
+  </form>
+  <input onclick="saveJobConf()" type="button" value="Save" class="btn btn-primary" />
+ </div>
+ 
+ <div id="divTopologyJarTitile"><strong><p class="text-left text-primary">Topology Jar: </p></strong></div>
+ <div align="left">
+  <table id="tableUpLoaded" class="table table-bordered">
+   <thead>
+    <tr>
+     <th>Name</th>
+     <th>Uploaded Time</th>
+    </tr>
+   </thead>
+   <tbody>
+   </tbody>
+  </table>
+ </div>
+ <div id="addJarDiv" align="left">
+  <input type="button" value="Select Jar" id="btnAddJar" onClick="addJar()" class="btn btn-info"/>
+  <input type="text" id="jarName" style="disabled: disabled" readonly="readonly" style="width:300px;"></input> 
+  <input type="button" value="Uplaod" id="btnUpload" class="btn btn-info" onClick="upLoadJar()" />
+  <input type="button" value="Delete Jar" id="btnDelJar" onClick="delJar()" class="btn btn-info" />
+  <input type="file" name="topologyJar" id="topologyJar" style="visibility: hidden" onchange="jarSelcted()" />
+ </div>
+ 
+ <div id="divParamTitle"><strong><p class="text-left text-primary">Topology Param: </p></strong></div>
+ <div id="divParam" align="center">
+  <table align="center">
+   <tbody>
+    <tr>
+     <td style="width: 20%"><label><font color="red">*</font>main  class:</label></td> 
+     <td style="width: 50%"><input type="text" id="mainClass"></input> the main class of topology</td>
+     <td style="width: 10%"></td>
+     <td style="width: 20%"></td>
+    </tr>
+    <tr id="topoNameTr">
+     <td style="width: 20%"><label>topology name:</label></td>
+     <td style="width: 50%"><input type="text" id="topoName"></input></td>
+     <td style="width: 10%"></td>
+     <td style="width: 20%"></td>
+    </tr>
+    <tr id="jobConfTr">
+     <td style="width: 20%"><label>job config:</label></td>
+     <td style="width: 60%"><input type="text" id="jonbConfig"></input></td>
+     <td style="width: 10%"></td>
+     <td style="width: 20%"></td>
+    </tr>
+    <tr id="argsTr">
+     <td style="width: 20%"><label>topology args:</label></td>
+     <td style="width: 50%"><input type="text" id="args" class="args"></input> <input type="button" value="+" id="btnAddParam" onClick="addParam()" /></td>
+     <td style="width: 10%"><input type="file" name="topologyArgsFile" id="topologyArgsFile" onchange="argsFileSet(this)" /></td>
+     <td style="width: 20%"></td>
+    </tr>
+   </tbody>
+  </table>
+ </div>
+ <div style="width:100%; margin-top:30px;">
+  <input onclick="submitTopology()" type="button" value="Submit Job" id="btnSubmit" class="btn btn-danger" />
+ </div>
+</body>
+<script>
+  var action = "update";
+  var siteId = "";
+  $(document).ready(
+    function() {
+      action = $.url("?action");
+      if (action == "create") {
+        initJobContentTemplate();
+        return;
+      }
+      if (action == "create") {
+        siteId = "";
+      } else {
+        siteId = $.url("?site-id");  
+      }
+      loadJobConfig();
+      loadJarList();
+      setDefaultValue();
+    }
+  );
+  $('#divJobConfigTitle').click(function() {
+    $('#divJobContent').toggle();
+  });
+  $('#divTopologyJarTitile').click(function() {
+    $('#addJarDiv').toggle();
+  });
+  $('#divParamTitle').click(function() {
+    $('#divParam').toggle();
+  });
+</script>
+</html>

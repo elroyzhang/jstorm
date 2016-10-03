@@ -1,0 +1,1 @@
+{"configuration":{"storm.zookeeper.root":"/jstorm/test","storm.zookeeper.port":"1234"}}

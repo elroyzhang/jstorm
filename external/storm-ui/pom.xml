@@ -1,0 +1,51 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+ <modelVersion>4.0.0</modelVersion>
+ <parent>
+  <groupId>com.tencent.jstorm</groupId>
+  <artifactId>jstorm</artifactId>
+  <version>tdh1u1-SNAPSHOT</version>
+  <relativePath>../../</relativePath>
+ </parent>
+ <artifactId>storm-ui</artifactId>
+ <name>${project.artifactId}-${project.version}</name>
+ <description>JStorm UI Distribution</description>
+ <properties>
+  <packaging.type>jar</packaging.type>
+  <scope.type>provided</scope.type>
+ </properties>
+ <profiles>
+  <profile>
+   <activation>
+    <property>
+     <name>war</name>
+    </property>
+   </activation>
+   <properties>
+    <packaging.type>war</packaging.type>
+    <scope.type>compile</scope.type>
+   </properties>
+   <build>
+    <finalName>storm-ui</finalName>
+    <resources>
+     <resource>
+      <directory>${project.basedir}/../../conf</directory>
+      <excludes>
+       <exclude>storm-env.sh</exclude>
+       <exclude>storm.yaml</exclude>
+      </excludes>
+     </resource>
+    </resources>
+   </build>
+  </profile>
+ </profiles>
+ <packaging>${packaging.type}</packaging>
+ <dependencies>
+  <dependency>
+   <groupId>com.tencent.jstorm</groupId>
+   <artifactId>jstorm-core</artifactId>
+   <version>${project.version}</version>
+   <scope>${scope.type}</scope>
+  </dependency>
+ </dependencies>
+</project>

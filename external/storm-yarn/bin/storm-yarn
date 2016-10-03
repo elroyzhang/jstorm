@@ -1,0 +1,73 @@
+#!/bin/bash
+#  Copyright (c) 2013 Yahoo! Inc. All Rights Reserved.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License. See accompanying LICENSE file.
+#
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+
+readonly STORM_ON_YARN_BIN="$(dirname "$("$bin"/read-link "$0")")"
+readonly MASTER_JAR="$(ls "$STORM_ON_YARN_BIN"/../storm-yarn-*.jar "$STORM_ON_YARN_BIN"/../target/storm-yarn-*.jar 2> /dev/null | head -1)"
+readonly SSH2_JAR="$(ls "$STORM_ON_YARN_BIN"/../lib/ganymed-ssh2-*.jar 2> /dev/null | head -1)"
+
+if [ `command -v storm` ]; then
+    readonly STORM_BIN="$(dirname "$("$bin"/read-link "$(which storm)")")"
+    STORM_CLASSPATH="$(storm classpath)"
+else
+    echo "storm is not installed" >&2
+    exit 1
+fi
+
+if [ -n "${JAVA_HOME}" ]; then
+    RUNNER="${JAVA_HOME}/bin/java"
+else
+    if [ `command -v java` ]; then
+	RUNNER="java"
+    else
+	echo "JAVA_HOME is not set" >&2
+	exit 1
+    fi
+fi
+
+if [ `command -v yarn` ]; then
+    YARN_CLASSPATH="$(yarn classpath)"
+else
+    echo "yarn is not installed" >&2
+    exit 1
+fi
+
+
+if [ "$STORM_CONF_DIR" != "" ]; then
+  STORM_CONF_DIR=$STORM_CONF_DIR
+else
+  STORM_CONF_DIR=$HOME/.storm  
+fi
+
+if [ "$STORM_CONF_DIR" = "" ]; then
+  echo "Error: STORM_CONF_DIR or ~/.storm is not set." >&2
+  exit 1
+fi
+
+CLASSPATH="$STORM_YARN_CONF_DIR:$MASTER_JAR:$YARN_CLASSPATH:$STORM_CLASSPATH:$STORM_CONF_DIR"
+
+if [ -d $STORM_BIN/../external/storm-yarn/ ] ; then 
+   for f in $STORM_BIN/../external/storm-yarn/storm-yarn-*.jar; do
+      CLASSPATH=${CLASSPATH}:$f;
+  done
+else 
+   echo "storm-yarn-*.jar does not exists" >&2
+   exit 1
+fi
+
+#echo "$RUNNER" -cp "$CLASSPATH" -Dstorm.home="$STORM_BIN"/.. com.yahoo.storm.yarn.Client "$@"
+exec "$RUNNER" -cp "$CLASSPATH":"$SSH2_JAR" -Dstorm.home="$STORM_BIN"/.. com.yahoo.storm.yarn.Client "$@"

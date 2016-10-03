@@ -1,0 +1,50 @@
+<script id="crawler-job-conf-template" type="text/html">
+  <h2>Crawler job configs</h2>
+  <table id="crawler-job-table">
+    <thead>
+      <tr>
+        <!--
+        <th>
+          <span class="tip right" title="Choose Site">
+            Choose
+          </span>
+        </th>
+        -->
+        <th>
+          <span class="tip right" title="The ID of crawler job config">
+            Site Id
+          </span>
+        </th>
+        <th>
+          <span class="tip above" title="Config job and start">
+            Config and Start
+          </span>
+        </th>
+        <th>
+          <span class="tip above" title="The topology of site(running)">
+            Topology Name
+          </span>
+        </th>
+        <th>
+          <span class="tip above" title="Operation">
+            Operation
+          </span>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#job-summarys}}
+      <tr>
+        <!--<td><input type="checkbox" id="jobCheck"></input></td>-->
+        <td id="siteId">{{site-id}}</td>
+        <td><a href="javascript:void(0)" onClick="javascript:window.showModalDialog('crawler/job-content-new.html?site-id={{site-id}}', '_blank', 'status:no;scroll:no;dialogheight:900px;dialogwidth:800px;')">show content</a></td>
+        <td id="name"><a href="javascript:void(0)"  onClick="javascript:window.open('topology.html?id={{topology-id}}', '_blank')">{{topology-name}}</a></td>
+        <td id="oper">
+          <input onclick="stopJob(this)" id= "btnStopJob" type="button" value="stop job" class="btn btn-primary">
+          <input onclick="deleteJob({{site-id}})" id= "btnDeleteJob" type="button" value="delete job" class="btn btn-primary">
+        </td>
+      </tr>
+      {{/job-summarys}}
+    </tbody>
+  </table>
+</script>
